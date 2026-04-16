@@ -7,7 +7,7 @@ stage(checkout)
 steps{
 checkout([
 $class:'GITSCM',
-branches: [[name: '*/main]]
+branches: [[name: '*/main']]
 userRemoteConfig:[[
 url: 'https://github.com/Sadik355/Student-App.git'
 credentialsId: 'github_token'
