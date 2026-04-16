@@ -1,2 +1,34 @@
-@Library('shared-library') _
-reusablePipeline('https://github.com/devops5014/student-app.git', 'github-pass')
+pipeline{
+agent {
+label "worker_node"
+}
+stages{
+stage(checkout)
+steps{
+checkout([
+$class:'GITSCM',
+branches: [[name: '*/main]]
+userRemoteConfig:[[
+url: 'https://github.com/Sadik355/Student-App.git'
+credentialsId: 'github_token'
+]]
+])
+}
+}
+stage('Build'){
+steps{
+sh 'mvn clean install'
+}
+}
+stage('Test')
+steps{
+sh 'mvn test'
+}
+}
+stage('Deploy to Artifactory')
+configFileProvider([configFile(fileid: '3d627782-c2ae-489c-a33c-8a541245abd9', variable:'MAVEN_SETTINGS')])
+{
+sh mvn deploy -s $MAVEN_SETTINGS'
+}
+}
+}
