@@ -6,7 +6,7 @@ pipeline {
     environment {
         AWS_REGION = 'us-east-1'
         ACCOUNT_ID = '883886327283'
-        ECR_REPO   = 'Student-App'
+        ECR_REPO   = 'student-app'
         IMAGE_TAG  = 'latest'
         IMAGE_URI  = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
     }
