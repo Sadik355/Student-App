@@ -3,6 +3,14 @@ pipeline {
         label "worker_node"
     }
 
+    environment {
+        AWS_REGION = 'us-east-1'
+        ACCOUNT_ID = '883886327283'
+        ECR_REPO   = 'Student-App'
+        IMAGE_TAG  = 'latest'
+        IMAGE_URI  = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -40,6 +48,51 @@ pipeline {
                 ]) {
                     sh 'mvn deploy -s $MAVEN_SETTINGS'
                 }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                docker tag ${ECR_REPO}:${IMAGE_TAG} ${IMAGE_URI}
+                """
+            }
+        }
+
+        stage('AWS Auth & ECR Setup') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh """
+                    aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                    aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                    aws configure set region ${AWS_REGION}
+
+                    aws ecr describe-repositories --repository-names ${ECR_REPO} --region ${AWS_REGION} || \
+                    aws ecr create-repository --repository-name ${ECR_REPO} --region ${AWS_REGION}
+
+                    aws ecr get-login-password --region ${AWS_REGION} | \
+                    docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                    """
+                }
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                sh "docker push ${IMAGE_URI}"
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh """
+                docker rm -f student-app || true
+                docker run -d -p 8080:8080 --name student-app ${IMAGE_URI}
+                """
             }
         }
     }
